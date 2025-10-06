@@ -41,6 +41,9 @@
     <div class="p-3 flex items-center gap-2 bg-white border-b">
       <button @click="saveLayout" class="px-3 py-1 bg-blue-600 text-white rounded">Save</button>
       <button @click="loadLayout" class="px-3 py-1 bg-gray-200 rounded">Load</button>
+      <button @click="saveToCloud" class="text-blue-600">Save to Cloud</button>
+      <button @click="loadFromCloud" class="text-blue-600">Load from Cloud</button>
+
       <button @click="exportLayout" class="px-3 py-1 bg-green-600 text-white rounded">Export JSON</button>
       <button @click="triggerImport" class="px-3 py-1 bg-yellow-500 text-white rounded">Import JSON</button>
       <button @click="resetToDefault" class="px-3 py-1 bg-red-500 text-white rounded">Reset</button>
@@ -109,7 +112,36 @@ import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import type { Node, Edge } from '@vue-flow/core'
+import { supabase } from '@/lib/supabase'
 import '@vue-flow/core/dist/style.css'
+
+async function saveToCloud() {
+  console.log('vite_supabase_url: ', import.meta.env.VITE_SUPABASE_URL)
+
+
+  const layout = { nodes: nodes.value, edges: edges.value }
+  const { error } = await supabase
+      .from('diagrams')
+      .insert([{ name: 'default', json: layout }])
+  if (error) alert('Save failed: ' + error.message)
+  else alert('Saved to cloud ✅')
+}
+
+async function loadFromCloud() {
+  const { data, error } = await supabase
+      .from('diagrams')
+      .select('json')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+  if (error) return alert('Load failed: ' + error.message)
+
+  if (data?.json) {
+    nodes.value = data.json.nodes
+    edges.value = data.json.edges
+    alert('Loaded from cloud ☁️')
+  }
+}
 
 /* --- UI Enhancements --- */
 function getNodeStyle(type?: string) {
