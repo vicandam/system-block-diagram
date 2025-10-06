@@ -3,8 +3,6 @@ interface ImportMetaEnv {
     readonly VITE_SUPABASE_ANON_KEY: string
 }
 
-console.log('test: ', ImportMetaEnv);
-
 interface ImportMeta {
     readonly env: ImportMetaEnv
 }
