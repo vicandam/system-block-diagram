@@ -218,3 +218,72 @@ create table diagrams (
 
 ✅ Deliverable #4 Complete  
 Documentation ready for contributors to extend node visuals, types, and live metric feeds.
+
+
+---
+
+## 💾 Exporting and Importing Layouts (JSON)
+
+The diagram state (nodes + edges) can be exported or imported as JSON for backup, sharing, or versioning.
+
+### **Export Layout**
+
+The `exportLayout()` function converts the current state into a `.json` file and automatically triggers a download in the browser.
+
+```ts
+function exportLayout() {
+  const data = JSON.stringify({ nodes: nodes.value, edges: edges.value }, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'diagram-layout.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+```
+
+🟢 **Result:** The browser downloads a file like `diagram-layout.json` containing the entire layout state.
+
+---
+
+### **Import Layout**
+
+Allows users to import a previously exported diagram JSON and restore the layout.
+
+```ts
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function triggerImport() {
+  fileInput.value?.click()
+}
+
+function onFileSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+  const file = input.files[0]
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result))
+      if (parsed.nodes && parsed.edges) {
+        isApplyingLoad = true
+        nodes.value = parsed.nodes
+        edges.value = parsed.edges
+        setTimeout(() => { isApplyingLoad = false }, 200)
+        alert('Layout imported')
+      } else {
+        alert('Invalid layout file (missing nodes/edges)')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Failed to parse JSON')
+    }
+    input.value = '' // reset
+  }
+  reader.readAsText(file)
+}
+```
+
+🟢 **Result:** The selected JSON file restores the node positions and edges to their saved state.
+
