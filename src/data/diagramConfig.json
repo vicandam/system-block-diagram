@@ -1,0 +1,45 @@
+{
+  "nodes": [
+    {
+      "id": "auth",
+      "label": "Auth Proxy",
+      "tooltip": "Traefik + oauth2-proxy",
+      "x": 60,
+      "y": 60,
+      "width": 200,
+      "height": 100
+    },
+    {
+      "id": "bff",
+      "label": "Admin BFF",
+      "tooltip": "Handles UI + tokens",
+      "x": 340,
+      "y": 200,
+      "width": 220,
+      "height": 120
+    },
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "tooltip": "Dashboards + Live WS",
+      "x": 640,
+      "y": 60,
+      "width": 200,
+      "height": 100
+    },
+    {
+      "id": "loki",
+      "label": "Loki",
+      "tooltip": "Log backend",
+      "x": 640,
+      "y": 260,
+      "width": 200,
+      "height": 100
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "auth", "target": "bff" },
+    { "id": "e2", "source": "bff", "target": "grafana" },
+    { "id": "e3", "source": "grafana", "target": "loki" }
+  ]
+}
