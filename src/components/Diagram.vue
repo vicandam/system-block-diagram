@@ -145,7 +145,7 @@ const initialNodes = diagramConfig.nodes.map((n: any) => ({
   id: n.id,
   type: 'block',
   position: { x: n.x, y: n.y },
-  data: { label: n.label, tooltip: n.tooltip },
+  data: { label: n.label, tooltip: n.tooltip, type: n.type },
   style: { width: n.width, height: n.height }
 })) as Node[]
 
