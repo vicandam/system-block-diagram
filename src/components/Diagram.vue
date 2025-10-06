@@ -1,6 +1,6 @@
 <template>
   <div style="flex:1; width:100%; height:100%;" class="w-full h-full flex flex-col">
-    <!-- ▪ Toolbar -->
+    <!-- Toolbar -->
     <div class="p-3 flex items-center gap-2 bg-white border-b">
       <button @click="saveLayout" class="px-3 py-1 bg-blue-600 text-white rounded">Save</button>
       <button @click="loadLayout" class="px-3 py-1 bg-gray-200 rounded">Load</button>
@@ -9,6 +9,7 @@
         <option disabled value="">-- Select Diagram --</option>
         <option v-for="d in diagramsList" :key="d.id" :value="d.id">{{ d.name }}</option>
       </select>
+
       <button @click="saveToCloud" class="text-blue-600">Save to Cloud</button>
       <button @click="loadFromCloud" class="text-blue-600">Load from Cloud</button>
 
@@ -20,7 +21,7 @@
       <input ref="fileInput" type="file" accept="application/json" @change="onFileSelected" style="display:none" />
     </div>
 
-    <!-- ▪ Diagram Area -->
+    <!-- Diagram Area -->
     <div style="flex:1; width:100%; height:100%;">
       <VueFlow
           v-model:nodes="nodes"
@@ -31,17 +32,13 @@
       >
         <Background />
         <MiniMap />
-        <Controls />
+        <Controls /> <!-- ✅ Fit View, Zoom In/Out, Lock -->
 
-        <!-- ▪ Custom Node Template -->
-        <!-- Extend this block to include icons, dynamic badges, etc. -->
         <template #node-block="{ data }">
           <div
               :title="data.tooltip"
               class="p-3 w-full h-full border rounded-xl shadow hover:shadow-md transition-all text-white"
               :style="getNodeStyle(data.type)"
-              @mouseenter="showTooltip(data)"
-              @mouseleave="hideTooltip"
           >
             <div class="font-semibold text-sm">{{ data.label }}</div>
             <div class="text-xs opacity-80">{{ data.metric ?? '—' }}</div>
@@ -51,8 +48,8 @@
       </VueFlow>
     </div>
 
-    <!-- ▪ Legend -->
-    <div class="absolute bottom-4 right-4 bg-white/80 p-3 rounded shadow text-sm">
+    <!-- Legend -->
+    <div class="absolute bottom-24 right-4 bg-white/80 p-3 rounded shadow text-sm">
       <div class="font-semibold mb-1">Legend</div>
       <div class="flex flex-col gap-1">
         <div><span class="inline-block w-3 h-3 bg-green-500 mr-1"></span>Infra</div>
@@ -62,7 +59,7 @@
       </div>
     </div>
 
-    <!-- ▪ Tooltip -->
+    <!-- Tooltip -->
     <div
         v-if="tooltip.visible"
         class="fixed z-50 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow"
@@ -74,23 +71,6 @@
 </template>
 
 <script setup lang="ts">
-/**
- * -------------------------------------------------------------
- * Diagram.vue — Interactive Infrastructure Diagram
- * -------------------------------------------------------------
- * Features:
- *  • Drag-and-drop nodes, resize blocks, zoom/pan
- *  • Local + cloud save (Supabase)
- *  • Mock metric auto-refresh (5s)
- *  • Tooltip hover interactivity
- *  • Config-based node/edge definition
- *
- * 🔧 Developer Notes:
- *  - To add new node types → see getNodeStyle() and diagramConfig.json
- *  - To integrate real data → replace generateRandomMetrics()
- *  - To modify autosave behavior → see watch([nodes, edges])
- */
-
 import { ref, onMounted, watch } from 'vue'
 import diagramConfig from '../data/diagramConfig.json'
 import { VueFlow } from '@vue-flow/core'
@@ -100,36 +80,33 @@ import { MiniMap } from '@vue-flow/minimap'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import type { Node, Edge } from '@vue-flow/core'
 import { supabase } from '@/lib/supabase'
-import '@vue-flow/core/dist/style.css'
 
-/* ──────────────────────────────────────────────
-   📦 Reactive State
-───────────────────────────────────────────────*/
+// ✅ CSS imports for Vue Flow modules
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/minimap/dist/style.css'
+import '@vue-flow/node-resizer/dist/style.css'
+
+/* -------------------
+   Diagram State Setup
+------------------- */
 const diagramsList = ref<any[]>([])
 const selectedDiagram = ref<string>('')
 
-/* ──────────────────────────────────────────────
-   🎨 Node Appearance Mapping
-───────────────────────────────────────────────*/
-/**
- * Add new node type colors here.
- * Example: { type: 'cache', color: '#0ea5e9' }
- */
+/* --- Node Colors --- */
 function getNodeStyle(type?: string) {
-  const colors: Record<string, string> = {
+  const colors: Record<string,string> = {
     infra: '#22c55e',
     backend: '#3b82f6',
     monitoring: '#a855f7',
     frontend: '#f97316',
-    default: '#6b7280',
+    default: '#6b7280'
   }
   const color = colors[type ?? 'default']
   return { backgroundColor: color, color: 'white' }
 }
 
-/* ──────────────────────────────────────────────
-   💬 Tooltip System
-───────────────────────────────────────────────*/
+/* --- Tooltip logic --- */
 const tooltip = ref({ visible: false, text: '', x: 0, y: 0 })
 function showTooltip(data: any) {
   tooltip.value.text = data.tooltip
@@ -145,43 +122,45 @@ function moveTooltip(e: MouseEvent) {
   tooltip.value.y = e.pageY + 10
 }
 
-/* ──────────────────────────────────────────────
-   🧱 Base Node + Edge Configuration
-   (from /data/diagramConfig.json)
-───────────────────────────────────────────────*/
+/* --- Load initial config --- */
 const initialNodes = diagramConfig.nodes.map((n: any) => ({
   id: n.id,
   type: 'block',
   position: { x: n.x, y: n.y },
   data: { label: n.label, tooltip: n.tooltip, type: n.type },
-  style: { width: n.width, height: n.height },
+  style: { width: n.width, height: n.height }
 })) as Node[]
+
 const initialEdges = diagramConfig.edges as Edge[]
 
 const nodes = ref<Node[]>(JSON.parse(JSON.stringify(initialNodes)))
 const edges = ref<Edge[]>(JSON.parse(JSON.stringify(initialEdges)))
 
-/* ──────────────────────────────────────────────
-   💾 Local Storage Autosave
-───────────────────────────────────────────────*/
+/* --- Local autosave setup --- */
 const SAVE_KEY = 'diagram_layout_v1'
 let autosaveTimer: number | null = null
 let isApplyingLoad = false
 
 watch([nodes, edges], () => {
   if (isApplyingLoad) return
-  if (autosaveTimer) window.clearTimeout(autosaveTimer)
+  if (autosaveTimer) clearTimeout(autosaveTimer)
   autosaveTimer = window.setTimeout(() => {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ nodes: nodes.value, edges: edges.value }))
-    console.log('[diagram] autosaved layout')
+    try {
+      const payload = { nodes: nodes.value, edges: edges.value }
+      localStorage.setItem(SAVE_KEY, JSON.stringify(payload))
+      console.log('[diagram] autosaved layout')
+    } catch (e) {
+      console.error('[diagram] autosave error', e)
+    }
   }, 1000)
 }, { deep: true })
 
-/* Manual Save + Load */
+/* --- Manual save/load --- */
 function saveLayout() {
   localStorage.setItem(SAVE_KEY, JSON.stringify({ nodes: nodes.value, edges: edges.value }))
-  alert('Layout saved locally')
+  alert('Layout saved to localStorage')
 }
+
 function loadLayout() {
   const raw = localStorage.getItem(SAVE_KEY)
   if (!raw) return alert('No saved layout found')
@@ -190,92 +169,120 @@ function loadLayout() {
   nodes.value = parsed.nodes
   edges.value = parsed.edges
   setTimeout(() => { isApplyingLoad = false }, 200)
-  alert('Layout loaded from localStorage')
+  alert('Layout loaded')
 }
 
-/* ──────────────────────────────────────────────
-   ☁ Supabase Cloud Sync
-───────────────────────────────────────────────*/
+/* --- Export layout as JSON file --- */
+function exportLayout() {
+  const data = JSON.stringify({ nodes: nodes.value, edges: edges.value }, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'diagram-layout.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/* --- Import layout from JSON --- */
+const fileInput = ref<HTMLInputElement | null>(null)
+function triggerImport() { fileInput.value?.click() }
+
+function onFileSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
+  const file = input.files[0]
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result))
+      if (parsed.nodes && parsed.edges) {
+        isApplyingLoad = true
+        nodes.value = parsed.nodes
+        edges.value = parsed.edges
+        setTimeout(() => { isApplyingLoad = false }, 200)
+        alert('Layout imported ✅')
+      } else alert('Invalid file: missing nodes/edges')
+    } catch (err) {
+      console.error(err)
+      alert('Failed to parse JSON')
+    }
+    input.value = ''
+  }
+  reader.readAsText(file)
+}
+
+/* --- Reset layout --- */
+function resetToDefault() {
+  if (!confirm('Reset to original default layout?')) return
+  isApplyingLoad = true
+  nodes.value = JSON.parse(JSON.stringify(initialNodes))
+  edges.value = JSON.parse(JSON.stringify(initialEdges))
+  localStorage.removeItem(SAVE_KEY)
+  setTimeout(() => { isApplyingLoad = false }, 200)
+  alert('Layout reset')
+}
+
+/* --- Supabase Cloud Sync --- */
 async function fetchDiagrams() {
-  const { data } = await supabase.from('diagrams').select('id, name, created_at').order('created_at', { ascending: false })
-  if (data) diagramsList.value = data
+  const { data, error } = await supabase.from('diagrams').select('id, name, created_at').order('created_at', { ascending: false })
+  if (!error && data) diagramsList.value = data
 }
 
 async function saveToCloud() {
   const layout = { nodes: nodes.value, edges: edges.value }
   if (selectedDiagram.value) {
-    await supabase.from('diagrams').update({ json: layout, updated_at: new Date() }).eq('id', selectedDiagram.value)
-    alert('Updated existing diagram ✅')
+    const { error } = await supabase.from('diagrams').update({ json: layout, updated_at: new Date() }).eq('id', selectedDiagram.value)
+    if (error) alert('Update failed: ' + error.message)
+    else alert('Diagram updated ☁️')
   } else {
-    const name = prompt('Enter new diagram name:')
+    const name = prompt('Enter diagram name:')
     if (!name) return
-    const { data } = await supabase.from('diagrams').insert([{ name, json: layout }]).select()
-    alert('Saved new diagram ☁️')
-    await fetchDiagrams()
-    selectedDiagram.value = data?.[0]?.id
+    const { data, error } = await supabase.from('diagrams').insert([{ name, json: layout }]).select()
+    if (error) alert('Save failed: ' + error.message)
+    else {
+      alert('Diagram saved ☁️')
+      await fetchDiagrams()
+      selectedDiagram.value = data[0].id
+    }
   }
 }
 
 async function loadFromCloud() {
   if (!selectedDiagram.value) return alert('Select a diagram first!')
-  const { data } = await supabase.from('diagrams').select('json').eq('id', selectedDiagram.value).single()
+  const { data, error } = await supabase.from('diagrams').select('json').eq('id', selectedDiagram.value).single()
+  if (error) return alert('Load failed: ' + error.message)
   if (data?.json) {
     nodes.value = data.json.nodes
     edges.value = data.json.edges
-    alert('Loaded from cloud ☁️')
+    alert('Loaded from cloud ✅')
   }
 }
 
-/* ──────────────────────────────────────────────
-   📈 Mock Metric Poller (every 5s)
-───────────────────────────────────────────────*/
-/**
- * Generates random mock metrics to simulate live performance data.
- * Replace this with real API/WebSocket feed for production.
- */
+/* --- Metric auto-refresh --- */
 function generateRandomMetrics() {
-  const samples = [
+  const metrics = [
     () => `${Math.floor(Math.random() * 150)} req/s`,
     () => `${(Math.random() * 500).toFixed(0)} ms avg`,
     () => `${Math.floor(Math.random() * 50)} sessions`,
-    () => `${(Math.random() * 2).toFixed(1)} k logs/min`,
+    () => `${(Math.random() * 2).toFixed(1)}k logs/min`
   ]
-  return samples[Math.floor(Math.random() * samples.length)]()
+  return metrics[Math.floor(Math.random() * metrics.length)]()
 }
 
 onMounted(() => {
   fetchDiagrams()
   setInterval(() => {
-    nodes.value = nodes.value.map(node => ({
-      ...node,
-      data: { ...node.data, metric: generateRandomMetrics() },
+    nodes.value = nodes.value.map(n => ({
+      ...n,
+      data: { ...n.data, metric: generateRandomMetrics() }
     }))
   }, 5000)
 })
-
-/**
- * Example JSON structure for adding new nodes:
- *
- * {
- *   "nodes": [
- *     {
- *       "id": "api",
- *       "x": 300,
- *       "y": 100,
- *       "width": 200,
- *       "height": 100,
- *       "label": "API Gateway",
- *       "tooltip": "Handles requests",
- *       "type": "backend"
- *     }
- *   ],
- *   "edges": [
- *     { "id": "e1-2", "source": "auth", "target": "api" }
- *   ]
- * }
- */
 </script>
 
 <style scoped>
-/* Reserved for minimal component tweaks */
+.vue-flow__controls {
+  z-index: 50 !important;
+}
 </style>
