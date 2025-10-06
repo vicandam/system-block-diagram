@@ -1,3 +1,40 @@
+<!--<template #node-block="{ data }">-->
+<!--  <div-->
+<!--      :title="data.tooltip"-->
+<!--      class="p-3 w-full h-full border rounded-xl shadow hover:shadow-md transition-all text-white"-->
+<!--      :style="getNodeStyle(data.type)"-->
+<!--      @mouseenter="showTooltip(data)"-->
+<!--      @mouseleave="hideTooltip"-->
+<!--  >-->
+<!--    <div class="font-semibold text-sm">{{ data.label }}</div>-->
+<!--    <div class="text-xs opacity-80">{{ data.metric ?? '—' }}</div>-->
+<!--    <NodeResizer :min-width="140" :min-height="70" />-->
+<!--  </div>-->
+
+
+<!--  &lt;!&ndash; legend &ndash;&gt;-->
+<!--  <div class="absolute bottom-4 right-4 bg-white/80 p-3 rounded shadow text-sm">-->
+<!--    <div class="font-semibold mb-1">Legend</div>-->
+<!--    <div class="flex flex-col gap-1">-->
+<!--      <div><span class="inline-block w-3 h-3 bg-green-500 mr-1"></span>Infra</div>-->
+<!--      <div><span class="inline-block w-3 h-3 bg-blue-500 mr-1"></span>Backend /API</div>-->
+<!--      <div><span class="inline-block w-3 h-3 bg-purple-500 mr-1"></span>Monitoring</div>-->
+<!--      <div><span class="inline-block w-3 h-3 bg-orange-500 mr-1"></span>Frontend /UI</div>-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  &lt;!&ndash; tooltip &ndash;&gt;-->
+<!--  <div-->
+<!--      v-if="tooltip.visible"-->
+<!--      class="fixed z-50 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow"-->
+<!--      :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"-->
+<!--  >-->
+<!--    {{ tooltip.text }}-->
+<!--  </div>-->
+<!--</template>-->
+
+
+
 <template>
   <div style="flex:1; width:100%; height:100%;" class="w-full h-full flex flex-col" >
     <!-- toolbar -->
@@ -27,15 +64,39 @@
         <template #node-block="{ data }">
           <div
               :title="data.tooltip"
-              class="p-3 w-full h-full bg-white border rounded-xl shadow hover:shadow-md transition-all"
+              class="p-3 w-full h-full border rounded-xl shadow hover:shadow-md transition-all text-white"
+              :style="getNodeStyle(data.type)"
+              @mouseenter="showTooltip(data)"
+              @mouseleave="hideTooltip"
           >
             <div class="font-semibold text-sm">{{ data.label }}</div>
-            <div class="text-xs text-gray-500">{{ data.metric ?? '—' }}</div>
+            <div class="text-xs opacity-80">{{ data.metric ?? '—' }}</div>
             <NodeResizer :min-width="140" :min-height="70" />
           </div>
         </template>
       </VueFlow>
     </div>
+
+    <!-- legend -->
+    <div class="absolute bottom-4 right-4 bg-white/80 p-3 rounded shadow text-sm">
+      <div class="font-semibold mb-1">Legend</div>
+      <div class="flex flex-col gap-1">
+        <div><span class="inline-block w-3 h-3 bg-green-500 mr-1"></span>Infra</div>
+        <div><span class="inline-block w-3 h-3 bg-blue-500 mr-1"></span>Backend /API</div>
+        <div><span class="inline-block w-3 h-3 bg-purple-500 mr-1"></span>Monitoring</div>
+        <div><span class="inline-block w-3 h-3 bg-orange-500 mr-1"></span>Frontend /UI</div>
+      </div>
+    </div>
+
+    <!-- tooltip -->
+    <div
+        v-if="tooltip.visible"
+        class="fixed z-50 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow"
+        :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+    >
+      {{ tooltip.text }}
+    </div>
+
   </div>
 </template>
 
@@ -49,6 +110,35 @@ import { MiniMap } from '@vue-flow/minimap'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import type { Node, Edge } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
+
+/* --- UI Enhancements --- */
+function getNodeStyle(type?: string) {
+  const colors: Record<string,string> = {
+    infra: '#22c55e',      // green-500
+    backend: '#3b82f6',    // blue-500
+    monitoring: '#a855f7', // purple-500
+    frontend: '#f97316',   // orange-500
+    default: '#6b7280'     // gray-500
+  }
+  const color = colors[type ?? 'default']
+  return { backgroundColor: color, color: 'white' }
+}
+
+/* Tooltip reactive state */
+const tooltip = ref({ visible: false, text: '', x: 0, y: 0 })
+function showTooltip(data: any) {
+  tooltip.value.text = data.tooltip
+  tooltip.value.visible = true
+  document.addEventListener('mousemove', moveTooltip)
+}
+function hideTooltip() {
+  tooltip.value.visible = false
+  document.removeEventListener('mousemove', moveTooltip)
+}
+function moveTooltip(e: MouseEvent) {
+  tooltip.value.x = e.pageX + 10
+  tooltip.value.y = e.pageY + 10
+}
 
 /* --- initial nodes/edges from config --- */
 const initialNodes = diagramConfig.nodes.map((n: any) => ({

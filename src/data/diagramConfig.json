@@ -7,7 +7,8 @@
       "x": 60,
       "y": 60,
       "width": 200,
-      "height": 100
+      "height": 100,
+      "type": "infra"
     },
     {
       "id": "bff",
@@ -16,7 +17,8 @@
       "x": 340,
       "y": 200,
       "width": 220,
-      "height": 120
+      "height": 120,
+      "type": "backend"
     },
     {
       "id": "grafana",
@@ -25,7 +27,8 @@
       "x": 640,
       "y": 60,
       "width": 200,
-      "height": 100
+      "height": 100,
+      "type": "monitoring"
     },
     {
       "id": "loki",
@@ -34,7 +37,8 @@
       "x": 640,
       "y": 260,
       "width": 200,
-      "height": 100
+      "height": 100,
+      "type": "backend"
     }
   ],
   "edges": [
