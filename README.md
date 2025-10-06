@@ -1,289 +1,125 @@
-# 🧭 Interactive System Block Diagram (Vue + Supabase + Vue Flow)
+# Interactive System Block Diagram
 
-This project is an **interactive system diagram builder** built with **Vue 3**, **Vue Flow**, **Tailwind CSS**, and **Supabase** for cloud sync.  
-It allows users to visually model infrastructure components, drag and resize nodes, save and load layouts locally or from the cloud, and visualize live system metrics in real time.
+This project visualizes interactive infrastructure diagrams with Vue 3, Vue Flow, and Tailwind CSS.
+It supports local autosave, Supabase cloud sync, JSON import/export, and live metric updates.
 
----
+## 🧩 Features
 
-## 🚀 Tech Stack
+- Drag-and-drop interactive nodes
+- Cloud sync via Supabase
+- JSON import/export support
+- Live metric updates
+- Tailwind CSS styling
+- Zoom, pan, and fit view controls
 
-| Layer | Technology |
-|-------|-------------|
-| Frontend | Vue 3 + Vite |
-| Diagram Engine | Vue Flow (v1.40) |
-| Styling | Tailwind CSS 3.4 |
-| Cloud Storage | Supabase (PostgreSQL + Row-Level Security) |
-| Hosting | (optional) DigitalOcean / Vercel demo |
+## 🧠 Usage
 
----
-
-## ⚙️ Key Features
-
-✅ Interactive drag, drop, resize nodes  
-✅ Autosave + manual save/load (local + Supabase)  
-✅ Cloud diagram management (multiple diagrams)  
-✅ Live metric overlay (req/s, latency, etc.)  
-✅ Tooltips and visual node types (infra, backend, frontend, etc.)  
-✅ JSON import/export and reset options  
-✅ Built-in Tailwind UI and responsive layout  
-
----
-
-## 🧱 Developer Documentation
-
-See the full guide below for extending node types, styling, and integrating live data feeds.  
-(Originally provided as Deliverable #4.)
-
----
-
-# 🧱 Developer Guide — Extending Nodes and Diagram Behavior
-
-This guide explains how to customize and extend the interactive system diagram built with Vue Flow and Supabase.
-
----
-
-## 🧩 Component Overview
-
-The interactive diagram is powered by **Vue Flow**, located at:
-
-```
-src/components/Diagram.vue
+Run locally:
+```bash
+npm run dev
 ```
 
-Features include:
+Build for production:
+```bash
+npm run build
+```
 
-- Drag & Drop, Resize
-- Hover tooltips
-- Local and Cloud (Supabase) save/load
-- Autosave with debounce
-- Live metric polling (simulated every 5 seconds)
-- Config-based layout via `diagramConfig.json`
 
----
+## 🧩 Interactivity
 
-## 🎨 Node Customization
+The diagram now supports full interactive features as described in the original requirements:
 
-Node visuals and color styles are defined in the `getNodeStyle()` function:
+### 🔹 Drag & Drop
+All nodes can be freely moved around the canvas. Positions are saved automatically (autosave every 1 second).
 
+### 🔹 Resize
+Each block is resizable using the node resizer handles on its corners. Dimensions are preserved during local save, export, and cloud sync.
+
+### 🔹 Hover Tooltips
+Hovering over any block displays a tooltip with its description, powered by reactive Vue state.
+
+### 🔹 Live Metric Overlay
+Each node shows a dynamic metric (e.g., “req/s”, “logs/min”, “ms avg”) that updates every 5 seconds via a randomized polling simulation.
+
+### 🔹 Zoom, Pan & Fit View
+- **Zoom:** Use the mouse scroll wheel to zoom in/out.  
+- **Pan:** Click and drag on empty canvas space to move around.  
+- **Fit View:** Re-centers and scales the entire layout within view (available in the control panel).
+
+### 🔹 Autosave
+Layout changes trigger a 1-second debounced autosave to `localStorage`. Manual Save, Load, Export, and Import options remain available in the toolbar.
+
+
+## 🌐 Embedding & Read-Only Mode
+
+The diagram can be embedded into any external web page or documentation site using an `<iframe>`.  
+This mode is **read-only**, meaning users can view but not drag, resize, or edit nodes.
+
+### 🧩 Usage
+
+To embed the diagram:
+```html
+<iframe
+  src="https://your-deployed-domain.com/?readonly=true"
+  width="100%"
+  height="600"
+  style="border:none;"
+></iframe>
+```
+
+Or test locally:
+```html
+<iframe
+  src="http://localhost:5173/?readonly=true"
+  width="100%"
+  height="600"
+  style="border:none;"
+></iframe>
+```
+
+### ⚙️ Implementation
+
+Add this logic to your `Diagram.vue`:
 ```ts
-function getNodeStyle(type?: string) {
-  const colors: Record<string, string> = {
-    infra: '#22c55e',
-    backend: '#3b82f6',
-    monitoring: '#a855f7',
-    frontend: '#f97316',
-    default: '#6b7280',
-  }
-  const color = colors[type ?? 'default']
-  return { backgroundColor: color, color: 'white' }
-}
+// Detect if ?readonly=true is in the URL
+const urlParams = new URLSearchParams(window.location.search)
+const readonlyMode = urlParams.get('readonly') === 'true'
 ```
 
-### ➕ Add a new node type
-
-To add a custom type (e.g., cache):
-
-```ts
-function getNodeStyle(type?: string) {
-  const colors: Record<string, string> = {
-    ...,
-    cache: '#0ea5e9',   // New node type
-  }
-  ...
-}
+Then apply it to your `<VueFlow>` instance:
+```vue
+<VueFlow
+  v-model:nodes="nodes"
+  v-model:edges="edges"
+  :nodes-draggable="!readonlyMode"
+  :nodes-connectable="!readonlyMode"
+  :elements-selectable="!readonlyMode"
+  :zoom-on-scroll="!readonlyMode"
+  :zoom-on-pinching="!readonlyMode"
+  :pan-on-drag="!readonlyMode"
+  fit-view
+  class="w-full h-full"
+>
 ```
 
-Then declare it in your `diagramConfig.json`:
-
-```json
-{
-  "id": "redis",
-  "x": 500,
-  "y": 200,
-  "width": 180,
-  "height": 100,
-  "label": "Redis Cache",
-  "tooltip": "Session and data cache",
-  "type": "cache"
-}
+Optional UI indicator:
+```vue
+<div
+  v-if="readonlyMode"
+  class="absolute top-2 right-2 bg-gray-200 text-xs px-2 py-1 rounded shadow"
+>
+  Read-Only Mode
+</div>
 ```
 
----
-
-## ⚙️ Node Configuration Schema
-
-Example from `diagramConfig.json`:
-
-```json
-{
-  "id": "auth",
-  "x": 60,
-  "y": 60,
-  "width": 200,
-  "height": 100,
-  "label": "Auth Proxy",
-  "tooltip": "Traefik + oauth2-proxy",
-  "type": "infra"
-}
-```
-
-Edges simply define the connections:
-
-```json
-{ "id": "e1-2", "source": "auth", "target": "bff" }
-```
-
----
-
-## 📊 Mock Metrics & Live Updates
-
-Metrics are currently simulated by:
-
-```ts
-function generateRandomMetrics() {
-  const samples = [
-    () => `${Math.floor(Math.random() * 150)} req/s`,
-    () => `${(Math.random() * 500).toFixed(0)} ms avg`,
-    () => `${Math.floor(Math.random() * 50)} sessions`,
-  ]
-  return samples[Math.floor(Math.random() * samples.length)]()
-}
-```
-
-### 🔄 Replace with real data
-
-To use live data from your backend or Supabase function:
-
-```ts
-const response = await fetch('/api/metrics')
-const metrics = await response.json()
-
-nodes.value = nodes.value.map(n => ({
-  ...n,
-  data: { ...n.data, metric: metrics[n.id] }
-}))
-```
-
----
-
-## 🎨 Styling (Tailwind)
-
-The app uses **Tailwind CSS 3.4** for all UI and layout styling.  
-You can extend your theme:
-
-```js
-// tailwind.config.js
-theme: {
-  extend: {
-    colors: {
-      cache: '#0ea5e9',
-    },
-  },
-}
-```
-
----
-
-## ☁️ Supabase Integration
-
-Diagrams are saved/loaded from the Supabase `diagrams` table.
-
-**Schema:**
-
-```sql
-create table diagrams (
-  id uuid primary key default gen_random_uuid(),
-  name text,
-  json jsonb,
-  created_at timestamp default now(),
-  updated_at timestamp
-);
-```
-
-**Functions:**
-
-- `saveToCloud()` → insert/update JSON layout
-- `loadFromCloud()` → retrieve diagram layout by ID
-
----
-
-## 🚀 Future Enhancements
-
-- Add icons inside nodes
-- Animated status indicators
-- Real-time WebSocket metrics
-- Edge colorization for load status
-
----
-
-✅ Deliverable #4 Complete  
-Documentation ready for contributors to extend node visuals, types, and live metric feeds.
+### ✅ Behavior Summary
+| Action                | Editable Mode | Read-Only Mode |
+|-----------------------|---------------|----------------|
+| Drag / Drop Nodes     | ✅ Yes         | ❌ No          |
+| Resize Nodes          | ✅ Yes         | ❌ No          |
+| Pan / Zoom            | ✅ Yes         | ❌ No          |
+| View Tooltips / Legend| ✅ Yes         | ✅ Yes         |
+| Save / Export / Cloud | ✅ Yes         | ❌ Disabled    |
 
 
----
-
-## 💾 Exporting and Importing Layouts (JSON)
-
-The diagram state (nodes + edges) can be exported or imported as JSON for backup, sharing, or versioning.
-
-### **Export Layout**
-
-The `exportLayout()` function converts the current state into a `.json` file and automatically triggers a download in the browser.
-
-```ts
-function exportLayout() {
-  const data = JSON.stringify({ nodes: nodes.value, edges: edges.value }, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'diagram-layout.json'
-  a.click()
-  URL.revokeObjectURL(url)
-}
-```
-
-🟢 **Result:** The browser downloads a file like `diagram-layout.json` containing the entire layout state.
-
----
-
-### **Import Layout**
-
-Allows users to import a previously exported diagram JSON and restore the layout.
-
-```ts
-const fileInput = ref<HTMLInputElement | null>(null)
-
-function triggerImport() {
-  fileInput.value?.click()
-}
-
-function onFileSelected(e: Event) {
-  const input = e.target as HTMLInputElement
-  if (!input.files || input.files.length === 0) return
-  const file = input.files[0]
-  const reader = new FileReader()
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(String(reader.result))
-      if (parsed.nodes && parsed.edges) {
-        isApplyingLoad = true
-        nodes.value = parsed.nodes
-        edges.value = parsed.edges
-        setTimeout(() => { isApplyingLoad = false }, 200)
-        alert('Layout imported')
-      } else {
-        alert('Invalid layout file (missing nodes/edges)')
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Failed to parse JSON')
-    }
-    input.value = '' // reset
-  }
-  reader.readAsText(file)
-}
-```
-
-🟢 **Result:** The selected JSON file restores the node positions and edges to their saved state.
-
+> 💡 For developers: see [src/docs/README_DEV.md](./src/docs/README_DEV.md) for internal details.

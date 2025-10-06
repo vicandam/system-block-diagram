@@ -1,4 +1,8 @@
 <template>
+  <div v-if="readonlyMode" class="absolute top-2 right-2 bg-gray-200 text-xs px-2 py-1 rounded shadow">
+    Read-Only Mode
+  </div>
+
   <div style="flex:1; width:100%; height:100%;" class="w-full h-full flex flex-col">
     <!-- Toolbar -->
     <div class="p-3 flex items-center gap-2 bg-white border-b">
@@ -26,13 +30,20 @@
       <VueFlow
           v-model:nodes="nodes"
           v-model:edges="edges"
+          :nodes-draggable="!readonlyMode"
+          :nodes-connectable="!readonlyMode"
+          :elements-selectable="!readonlyMode"
+          :zoom-on-scroll="!readonlyMode"
+          :zoom-on-pinching="!readonlyMode"
+          :pan-on-drag="!readonlyMode"
           fit-view
-          style="width:100%; height:100%;"
           class="w-full h-full"
       >
         <Background />
         <MiniMap />
-        <Controls /> <!-- ✅ Fit View, Zoom In/Out, Lock -->
+        <template v-if="!readonlyMode">
+          <Controls /> <!-- Fit View, Zoom In/Out, Lock -->
+        </template>
 
         <template #node-block="{ data }">
           <div
@@ -81,11 +92,18 @@ import { NodeResizer } from '@vue-flow/node-resizer'
 import type { Node, Edge } from '@vue-flow/core'
 import { supabase } from '@/lib/supabase'
 
-// ✅ CSS imports for Vue Flow modules
+// CSS imports for Vue Flow modules
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/minimap/dist/style.css'
 import '@vue-flow/node-resizer/dist/style.css'
+
+
+/* -------------------
+   Detect if the URL contains ?readonly=true
+------------------- */
+const urlParams = new URLSearchParams(window.location.search)
+const readonlyMode = urlParams.get('readonly') === 'true'
 
 /* -------------------
    Diagram State Setup
